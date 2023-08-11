@@ -11,7 +11,7 @@
 
 #include <cuda.h>
 
-#include "../cu/matSumKernel.h"
+#include "matSumKernel.h"
 
  // This will output the proper CUDA error strings
  // in the event that a CUDA host call returns an error
@@ -34,7 +34,7 @@ CUmodule   module;
 CUfunction function;
 size_t     totalGlobalMem;
 
-char* module_file = (char*)"../cu/matSumKernel.ptx";
+char* module_file = (char*)"matSumKernel.ptx";
 char* kernel_name = (char*)"matSum";
 
 
@@ -127,4 +127,48 @@ void runKernel(CUdeviceptr d_a, CUdeviceptr d_b, CUdeviceptr d_c)
     checkCudaErrors(cuLaunchKernel(function, N, 1, 1,  // Nx1x1 blocks
         1, 1, 1,            // 1x1x1 threads
         0, 0, args, 0));
+}
+
+int main(int argc, char** argv)
+{
+    int a[N], b[N], c[N];
+    CUdeviceptr d_a, d_b, d_c;
+
+    // initialize host arrays
+    for (int i = 0; i < N; ++i) {
+        a[i] = N - i;
+        b[i] = i * i;
+    }
+
+    // initialize
+    printf("- Initializing...\n");
+    initCUDA();
+
+    // allocate memory
+    setupDeviceMemory(&d_a, &d_b, &d_c);
+
+    // copy arrays to device
+    checkCudaErrors(cuMemcpyHtoD(d_a, a, sizeof(int) * N));
+    checkCudaErrors(cuMemcpyHtoD(d_b, b, sizeof(int) * N));
+
+    // run
+    printf("# Running the kernel...\n");
+    runKernel(d_a, d_b, d_c);
+    printf("# Kernel complete.\n");
+
+    // copy results to host and report
+    checkCudaErrors(cuMemcpyDtoH(c, d_c, sizeof(int) * N));
+    for (int i = 0; i < N; ++i) {
+        if (c[i] != a[i] + b[i])
+            printf("* Error at array position %d: Expected %d, Got %d\n",
+                i, a[i] + b[i], c[i]);
+    }
+    printf("*** All checks complete.\n");
+
+
+    // finish
+    printf("- Finalizing...\n");
+    releaseDeviceMemory(d_a, d_b, d_c);
+    finalizeCUDA();
+    return 0;
 }
