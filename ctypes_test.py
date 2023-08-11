@@ -29,7 +29,7 @@ module = c_longlong(0)
 function = c_longlong(0)
 totalGlobalMem = c_size_t(0)
 
-module_file = c_char_p(b"matSumKernel.ptx")
+module_file = c_char_p(b"cu/matSumKernel.ptx")
 kernel_name = c_char_p(b"matSum")
 
 CUDA_SUCCESS = 0
@@ -47,25 +47,20 @@ def initCUDA():
     major = c_long(0)
     minor = c_long(0)
 
-    #if (err == CUDA_SUCCESS):
     deviceCount = c_int(0)
-    #checkCudaErrors(
     mod.cuDeviceGetCount(byref(deviceCount))
 
     if (deviceCount == 0):
         print("Error: no devices supporting CUDA\n")
-        exit()
+        sys.exit()
  
-    #// get first CUDA device
-    #checkCudaErrors(
-    mod.cuDeviceGet(byref(device), 0)#);
+    #get first CUDA device
+    mod.cuDeviceGet(byref(device), 0)
     name = create_string_buffer(100) 
-    mod.cuDeviceGetName(name, 100, device);
-    print("> Using device 0: {:s}".format(name.value.decode()));
+    mod.cuDeviceGetName(name, 100, device)
+    print("> Using device 0: {:s}".format(name.value.decode()))
 
-    #// get compute capabilities and the devicename
-    #//checkCudaErrors(cuDeviceComputeCapability(&major, &minor, device));
-    #checkCudaErrors(
+    #get compute capabilities and the devicename
     mod.cuDeviceGetAttribute(byref(major), CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device)
     mod.cuDeviceGetAttribute(byref(minor), CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device)
 
@@ -79,21 +74,21 @@ def initCUDA():
     if (err != CUDA_SUCCESS):
         print("* Error initializing the CUDA context.")
         mod.cuCtxDestroy_v2(context)
-        exit()
+        sys.exit()
         
     err = mod.cuModuleLoad(byref(module), module_file)
     if (err != CUDA_SUCCESS):
         print(err)
         print("* Error loading the module {:s}\n".format(module_file.value.decode()))
         mod.cuCtxDestroy_v2(context)
-        exit()
+        sys.exit()
 
     err = mod.cuModuleGetFunction(byref(function), module, kernel_name)
     if (err != CUDA_SUCCESS):
         print(err)
         print("* Error getting kernel function {:s}".format(kernel_name.value.decode()))
         mod.cuCtxDestroy_v2(context)
-        exit()
+        sys.exit()
 
     
 def finalizeCUDA():
@@ -124,8 +119,8 @@ def runKernel(d_a, d_b, d_c):
                          cast(byref(d_b), c_void_p),
                          cast(byref(d_c), c_void_p))
 
-    #// grid for kernel: <<<N, 1>>>
-    mod.cuLaunchKernel(function, N, 1, 1,  #ptsz  // Nx1x1 blocks
+    #grid for kernel: <<<N, 1>>>
+    mod.cuLaunchKernel_ptsz(function, N, 1, 1,  #ptsz  // Nx1x1 blocks
         1, 1, 1,            #// 1x1x1 threads
         0, 0, args, 0)
 
