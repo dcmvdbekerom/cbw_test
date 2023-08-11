@@ -187,6 +187,12 @@ class cuModule:
             self.func_dict[attr] = cuFunction(function)
             return self.func_dict[attr] 
 
+    def setConstant(self, name, c_val):
+        var = c_void_p()
+        size = c_long()
 
+        lib.cuModuleGetGlobal_v2(byref(var), byref(size), self.module, c_char_p(name.encode()))
+        lib.cuMemcpyHtoD_v2(var, byref(c_val), size)
+        
 
 
