@@ -31,7 +31,7 @@ ctx = cuContext()
 cu_I_arr = cuArray(fftshift(I_arr.astype(np.float32)*dt, axes=0))
 cu_I_FT_arr = cuArray(np.zeros((Nf, Nk), dtype=np.complex64))
 
-cufft_kernel = cuFFT(cu_I_arr, cu_I_FT_arr)
+cufft_kernel = cuFFT(cu_I_arr, cu_I_FT_arr, direction='fwd')
 cufft_kernel.execute()
 
 

@@ -213,22 +213,24 @@ class cuFFT:
     def __init__(self, arr_in, arr_out, direction='fwd'):
         self.arr_in = arr_in
         self.arr_out = arr_out
-        self.directon = direction
+        self.direction = direction
         self.plan = c_longlong(0)
         
         lib_cufft.cufftCreate(byref(self.plan))
         lib_cufft.cufftPlan1d(byref(self.plan), arr_in.size, CUFFT_R2C, 1)
 
-        n = (1*c_int)(arr_in.shape[0])
-        istride = arr_in.shape[1]
-        ostride = arr_in.shape[1]
+        arr = (arr_in if direction == 'fwd' else arr_out)
+
+        n = (1*c_int)(arr.shape[0])
+        istride = arr.shape[1]
+        ostride = arr.shape[1]
         idist = 1
         odist = 1
         inembed = (1*c_int)(0)
         onembed = (1*c_int)(0)
         
-        cufftType = {'fwd':CUFFT_R2C, 'bwd':CUFFT_C2R}[direction]
-        batch = arr_in.shape[1]
+        cufftType = (CUFFT_R2C if direction == 'fwd' else CUFFT_C2R)
+        batch = arr.shape[1]
 
         lib_cufft.cufftPlanMany(byref(self.plan), 1, n,
                                 inembed, istride, idist,
@@ -237,7 +239,10 @@ class cuFFT:
 
 
     def execute(self):
-        lib_cufft.cufftExecR2C(self.plan, self.arr_in.arr_d, self.arr_out.arr_d)
+        if self.direction == 'fwd':
+            lib_cufft.cufftExecR2C(self.plan, self.arr_in.arr_d, self.arr_out.arr_d)
+        else:
+            lib_cufft.cufftExecC2R(self.plan, self.arr_in.arr_d, self.arr_out.arr_d)
 
     def destroy(self):
         lib_cufft.cuDestroy(self.plan)
