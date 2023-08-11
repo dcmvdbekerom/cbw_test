@@ -1,19 +1,24 @@
 from ctypes import *
 import sys
+from nvidia.cufft import __path__
+
+lib = windll.LoadLibrary('nvcuda.dll')
+
+cufft_path = __path__[0] + '\\bin\\'
+lib_cufft = windll.LoadLibrary(cufft_path + 'cufft64_11.dll')
+
 
 #TODO: make compatible with linux/mac
 #TODO: implement cpu compatibility mode
 #TODO: establish cuda version requirement
 
-lib = windll.LoadLibrary('nvcuda.dll')
 
 CUDA_SUCCESS = 0
 CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR = 75
 CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR = 76
 
-#TODO: complete list, get rid of _v2's 
-cuDeviceGetCount = lib.cuDeviceGetCount
-cuDeviceGet = lib.cuDeviceGet
+CUFFT_R2C = 0x2A
+CUFFT_C2R = 0x2C 
 
 class cuContext:
     
@@ -201,6 +206,24 @@ class cuModule:
 
         lib.cuModuleGetGlobal_v2(byref(var), byref(size), self.module, c_char_p(name.encode()))
         lib.cuMemcpyHtoD_v2(var, byref(c_val), size)
+
         
+class cuFFT:
+    def __init__(self, arr_in, arr_out):
+        self.arr_in = arr_in
+        self.arr_out = arr_out
+        self.plan = c_longlong(0)
+
+        lib_cufft.cufftCreate(byref(self.plan))
+        lib_cufft.cufftPlan1d(byref(self.plan), arr_in.size, CUFFT_R2C, 1)
+
+    def execute(self):
+        lib_cufft.cufftExecR2C(self.plan, self.arr_in.arr_d, self.arr_out.arr_d)
+
+    def destroy(self):
+        lib_cufft.cuDestroy(self.plan)
+
+    def __del__(self):
+        self.destroy()
 
 
