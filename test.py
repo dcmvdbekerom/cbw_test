@@ -1,25 +1,26 @@
 import numpy as np
-from ctypes_cuda import cuArr, initCUDA, runKernel, finalizeCUDA
+from ctypes_cuda import cuContext, cuArray, cuModule
 
-
-print("- Initializing...");
-funlist = initCUDA("cu/matSumKernel.ptx", ["matSum"])
 
 N = 100
-
 dtype = np.int32
-a = cuArr(N - np.arange(N, dtype=dtype))
-b = cuArr(np.arange(N, dtype=dtype)**2)
-c = cuArr(np.zeros(N, dtype=dtype), is_returnvar=True)
 
+print("- Initializing...");
+print(cuContext.getDeviceList())
+ctx = cuContext()
+ctx.printCapabilities()
+
+a = cuArray(N - np.arange(N, dtype=dtype))
+b = cuArray(np.arange(N, dtype=dtype)**2)
+c = cuArray(np.zeros(N, dtype=dtype), is_returnvar=True)
+
+mod = cuModule("cu/matSumKernel.ptx")
+mod.matSum.set_grid(blocks=(N,1,1))
+mod.matSum.set_retvars([False, False, True])
 
 print("# Running the kernel...")
-#grid for kernel: <<<N, 1>>>
-blocks = (N,1,1)
-threads = (1,1,1)  
-runKernel(funlist["matSum"], blocks, threads, [a, b, c])
+mod.matSum(a,b,c)
 print("# Kernel complete.")
-
 
 for i in range(N):
     if (c[i] != a[i] + b[i]):
@@ -30,4 +31,4 @@ print("*** All checks complete.")
 
 
 print("- Finalizing...");
-finalizeCUDA()
+ctx.destroy()
