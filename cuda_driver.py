@@ -95,6 +95,7 @@ class cuArray:
         self.size = arr.size
         self.itemsize = arr.dtype.itemsize
         self.bytesize = arr.itemsize * arr.size
+        self.shape = arr.shape
 
         self.arr_d = c_void_p()        
         lib.cuMemAlloc_v2(byref(self.arr_d), self.bytesize)
@@ -209,13 +210,31 @@ class cuModule:
 
         
 class cuFFT:
-    def __init__(self, arr_in, arr_out):
+    def __init__(self, arr_in, arr_out, direction='fwd'):
         self.arr_in = arr_in
         self.arr_out = arr_out
+        self.directon = direction
         self.plan = c_longlong(0)
-
+        
         lib_cufft.cufftCreate(byref(self.plan))
         lib_cufft.cufftPlan1d(byref(self.plan), arr_in.size, CUFFT_R2C, 1)
+
+        n = (1*c_int)(arr_in.shape[0])
+        istride = arr_in.shape[1]
+        ostride = arr_in.shape[1]
+        idist = 1
+        odist = 1
+        inembed = (1*c_int)(0)
+        onembed = (1*c_int)(0)
+        
+        cufftType = {'fwd':CUFFT_R2C, 'bwd':CUFFT_C2R}[direction]
+        batch = arr_in.shape[1]
+
+        lib_cufft.cufftPlanMany(byref(self.plan), 1, n,
+                                inembed, istride, idist,
+                                onembed, ostride, odist,
+                                cufftType, batch)
+
 
     def execute(self):
         lib_cufft.cufftExecR2C(self.plan, self.arr_in.arr_d, self.arr_out.arr_d)
