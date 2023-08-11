@@ -21,7 +21,8 @@ mod = windll.LoadLibrary('nvcuda.dll')
 ##// --- global variables ----------------------------------------------------
 
 N = 100
-sizeof_int = 4
+dtype = np.int32
+sizeof_int = np.dtype(dtype).itemsize
 
 device = c_long(0)
 context = c_longlong(0)
@@ -124,9 +125,9 @@ def runKernel(d_a, d_b, d_c):
         1, 1, 1,            #// 1x1x1 threads
         0, 0, args, 0)
 
-a = N - np.arange(N, dtype=np.int32)
-b = np.arange(N, dtype=np.int32)**2
-c = np.zeros(N, dtype=np.int32)
+a = N - np.arange(N, dtype=dtype)
+b = np.arange(N, dtype=dtype)**2
+c = np.zeros(N, dtype=dtype)
 
 
 #CUdeviceptr d_a, d_b, d_c;
