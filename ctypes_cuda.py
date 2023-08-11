@@ -1,6 +1,10 @@
 from ctypes import *
 import sys
 
+#TODO: make compatible with linux/mac
+#TODO: implement cpu compatibility mode
+#TODO: establish cuda version requirement
+
 mod = windll.LoadLibrary('nvcuda.dll')
 ##
 ## // This will output the proper CUDA error strings
@@ -29,10 +33,12 @@ CUDA_SUCCESS = 0
 CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR = 75
 CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR = 76
 
+#TODO: complete list, get rid of _v2's 
 cuDeviceGetCount = mod.cuDeviceGetCount
 cuDeviceGet = mod.cuDeviceGet
 
 class cuArr:
+
     def __init__(self, arr, is_returnvar=False):
         global _numDeviceAllocs
         self.arr_h = arr
@@ -42,7 +48,7 @@ class cuArr:
         self.itemsize = arr.dtype.itemsize
         self.bytesize = arr.itemsize * arr.size
 
-        self.arr_d = c_void_p()
+        self.arr_d = c_void_p()        
         mod.cuMemAlloc_v2(byref(self.arr_d), self.bytesize)
         _numDeviceAllocs += 1
         self.h2d()
@@ -60,15 +66,17 @@ class cuArr:
         self.h2d()
 
     def h2d(self):
+
         mod.cuMemcpyHtoD_v2(self.arr_d, c_void_p(self.arr_h.ctypes.data), self.bytesize)
 
     def d2h(self):
+
         mod.cuMemcpyDtoH_v2(c_void_p(self.arr_h.ctypes.data), self.arr_d, self.bytesize)
         return self.arr_h
 
     def __del__(self):
+
         mod.cuMemFree_v2(self.arr_d)
-        print('Deleted ',self)
 
         
 
