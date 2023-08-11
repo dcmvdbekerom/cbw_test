@@ -1,5 +1,5 @@
 import numpy as np
-from ctypes_cuda import cuContext, cuArray, cuModule
+from cuda_drver import cuContext, cuArray, cuModule
 from ctypes import c_int, c_longlong, Structure
 
 N = 100
@@ -10,6 +10,7 @@ for i, dev in enumerate(cuContext.getDeviceList()):
     print('Device {:d}: {:s}'.format(i,dev))
 ctx = cuContext()
 ctx.printDeviceCapabilities()
+
 
 class transform(Structure):
     _fields_ = [
@@ -28,8 +29,9 @@ c = cuArray(np.zeros(N, dtype=dtype))
 mod = cuModule(ctx, "cu/matSumKernel.ptx")
 mod.matSum.set_grid(blocks=(N,1,1))
 mod.matSum.set_retvars([False, False, True])
-mod.setConstant('N', c_longlong(100))
+mod.setConstant('N', c_longlong(N))
 mod.setConstant('params', params)
+
 
 print("# Running the kernel...")
 mod.matSum(a,b,c)
