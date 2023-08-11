@@ -70,6 +70,9 @@ class cuContext:
         lib.cuDeviceTotalMem_v2(byref(totalGlobalMem), self.device)
         print("  Total amount of global memory:   {:d} bytes".format(totalGlobalMem.value))
         print("  64-bit Memory Address:           {:s}".format("YES" if totalGlobalMem.value > (2<<31) else "NO"))
+
+    def synchronize(self):
+        self.context.cuCtxSynchronize()
     
     def destroy(self):
         lib.cuCtxDestroy_v2(self.context);
@@ -121,6 +124,7 @@ class cuArray:
 class cuFunction:
     def __init__(self, fptr):
         self.fptr = fptr
+        self.retvars = None
     
     def set_grid(self, blocks=(1,1,1), threads=(1,1,1)):
         self.blocks = blocks
@@ -146,6 +150,10 @@ class cuFunction:
         except(KeyError):
             pass
 
+        if self.retvars is None:
+            self.retvars = len(vargs)*[False]
+            self.retvars[-1] = True
+            
         voidPtrArr = len(vargs)*c_void_p 
         cargs = voidPtrArr(*[cast(byref(arr.arr_d), c_void_p) for arr in vargs])
                            

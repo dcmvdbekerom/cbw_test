@@ -1,5 +1,5 @@
 import numpy as np
-from cuda_drver import cuContext, cuArray, cuModule
+from cuda_driver import cuContext, cuArray, cuModule
 from ctypes import c_int, c_longlong, Structure
 
 N = 100
