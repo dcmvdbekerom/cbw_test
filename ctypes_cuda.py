@@ -11,15 +11,13 @@ CUDA_SUCCESS = 0
 CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR = 75
 CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR = 76
 
-_defaultContext = c_longlong(0)
-
 #TODO: complete list, get rid of _v2's 
 cuDeviceGetCount = lib.cuDeviceGetCount
 cuDeviceGet = lib.cuDeviceGet
 
 class cuContext:
     
-    def __init__(self, device_id=0, flags=0, default=True):
+    def __init__(self, device_id=0, flags=0):
         err = lib.cuInit(0)
 
         deviceCount = c_int(0)
@@ -38,10 +36,6 @@ class cuContext:
             print("* Error initializing the CUDA context.")
             lib.cuCtxDestroy_v2(self.context)
             sys.exit()
-            
-        global _defaultContext
-        if default:
-            _defaultContext = self
             
     
     @staticmethod
@@ -64,7 +58,7 @@ class cuContext:
         return dev_list
     
     
-    def printCapabilities(self):
+    def printDeviceCapabilities(self):
         
         major = c_long(0)
         minor = c_long(0)  
@@ -87,9 +81,8 @@ class cuContext:
 
 class cuArray:
 
-    def __init__(self, arr, is_returnvar=False):
+    def __init__(self, arr):
         self.arr_h = arr
-        self.is_returnvar = is_returnvar
         self.dtype = arr.dtype
         self.size = arr.size
         self.itemsize = arr.dtype.itemsize
@@ -134,7 +127,7 @@ class cuFunction:
         self.threads = threads
     
     def set_retvars(self, retvars):
-        self.returnvars = retvars
+        self.retvars = retvars
         
     def __call__(self, *vargs, **kwargs):
     
@@ -158,18 +151,16 @@ class cuFunction:
                            
         lib.cuLaunchKernel(self.fptr, *self.blocks, *self.threads, 0, 0, cargs, 0)
         
-        for arr, is_retvar in zip(vargs, self.returnvars):
+        for arr, is_retvar in zip(vargs, self.retvars):
             if is_retvar:
                 arr.is_uptodate = False
 
 
 class cuModule:
-    def __init__(self, module_name, context=None):
+    def __init__(self, context, module_name):
         self.module_name = module_name
         module_file = c_char_p(module_name.encode())        
-        
-        global _defaultContext
-        self.context_obj = (_defaultContext if context is None else context)
+        self.context_obj = context
         self.module = c_longlong(0)
         err = lib.cuModuleLoad(byref(self.module), module_file)
         if (err != CUDA_SUCCESS):

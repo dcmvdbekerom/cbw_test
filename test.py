@@ -1,20 +1,20 @@
 import numpy as np
 from ctypes_cuda import cuContext, cuArray, cuModule
 
-
 N = 100
 dtype = np.int32
 
 print("- Initializing...");
-print(cuContext.getDeviceList())
+for i, dev in enumerate(cuContext.getDeviceList()):
+    print('Device {:d}: {:s}'.format(i,dev))
 ctx = cuContext()
-ctx.printCapabilities()
+ctx.printDeviceCapabilities()
 
 a = cuArray(N - np.arange(N, dtype=dtype))
 b = cuArray(np.arange(N, dtype=dtype)**2)
-c = cuArray(np.zeros(N, dtype=dtype), is_returnvar=True)
+c = cuArray(np.zeros(N, dtype=dtype))
 
-mod = cuModule("cu/matSumKernel.ptx")
+mod = cuModule(ctx, "cu/matSumKernel.ptx")
 mod.matSum.set_grid(blocks=(N,1,1))
 mod.matSum.set_retvars([False, False, True])
 
